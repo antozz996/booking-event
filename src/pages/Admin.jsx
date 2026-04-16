@@ -33,7 +33,7 @@ export default function Admin() {
   const [refresh, setRefresh] = useState(0)
 
   // Form Evento (Nuovo o Modifica)
-  const [nuovoEvento, setNuovoEvento] = useState({ titolo: '', data: '', descrizione: '' })
+  const [nuovoEvento, setNuovoEvento] = useState({ titolo: '', data: '', descrizione: '', image_position: 50 })
   const [fileImmagine, setFileImmagine] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [savingEvento, setSavingEvento] = useState(false)
@@ -62,13 +62,18 @@ export default function Admin() {
 
   function startEdit(ev) {
     setEditingId(ev.id)
-    setNuovoEvento({ titolo: ev.titolo, data: ev.data, descrizione: ev.descrizione || '' })
+    setNuovoEvento({ 
+      titolo: ev.titolo, 
+      data: ev.data, 
+      descrizione: ev.descrizione || '',
+      image_position: ev.image_position || 50
+    })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function resetForm() {
     setEditingId(null)
-    setNuovoEvento({ titolo: '', data: '', descrizione: '' })
+    setNuovoEvento({ titolo: '', data: '', descrizione: '', image_position: 50 })
     setFileImmagine(null)
   }
 
@@ -96,6 +101,7 @@ export default function Admin() {
       titolo: nuovoEvento.titolo,
       data: nuovoEvento.data,
       descrizione: nuovoEvento.descrizione,
+      image_position: nuovoEvento.image_position,
       image_url: urlImmagine 
     }
     
@@ -260,6 +266,21 @@ export default function Admin() {
                 <label style={labelStyle}>Descrizione (opzionale)</label>
                 <textarea style={{...inputStyle, height: 80, whiteSpace: 'pre-wrap'}} value={nuovoEvento.descrizione} onChange={e => setNuovoEvento({...nuovoEvento, descrizione: e.target.value})} />
               </div>
+
+              <div style={inputGroup}>
+                <label style={labelStyle}>Posizione Inquadratura ({nuovoEvento.image_position}%)</label>
+                <input type="range" min="0" max="100" value={nuovoEvento.image_position} onChange={e => setNuovoEvento({...nuovoEvento, image_position: parseInt(e.target.value)})} style={{ width: '100%' }} />
+                <div style={{ marginTop: 8, height: 80, borderRadius: 8, overflow: 'hidden', background: '#f1f5f9', border: '1px solid #e2e8f0' }}>
+                   {(fileImmagine || (editingId && eventi.find(ev => ev.id === editingId)?.image_url)) && (
+                     <img 
+                      src={fileImmagine ? URL.createObjectURL(fileImmagine) : eventi.find(ev => ev.id === editingId)?.image_url} 
+                      alt="Preview" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${nuovoEvento.image_position}%` }} 
+                     />
+                   )}
+                </div>
+                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>Trascina il cursore per centrare l'immagine nell'anteprima sopra.</p>
+              </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button type="submit" disabled={savingEvento} style={{ flex: 1, padding: 12, background: '#0284c7', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
                   {savingEvento ? 'Salvataggio...' : editingId ? 'Aggiorna Evento' : 'Salva Evento'}
@@ -278,7 +299,7 @@ export default function Admin() {
             {eventi.length === 0 ? <p style={{ textAlign: 'center', color: '#6b7280', padding: 40 }}>Nessun evento in calendario</p> : eventi.map(ev => (
               <div key={ev.id} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', border: editingId === ev.id ? '2px solid #0284c7' : 'none' }}>
                 {ev.image_url ? (
-                  <img src={ev.image_url} alt="" style={{ width: 140, height: '100%', objectFit: 'cover' }} />
+                  <img src={ev.image_url} alt="" style={{ width: 140, height: '100%', objectFit: 'cover', objectPosition: `center ${ev.image_position}%` }} />
                 ) : (
                   <div style={{ width: 140, height: '100%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>No Image</div>
                 )}

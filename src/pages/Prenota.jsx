@@ -123,7 +123,7 @@ export default function Prenota() {
         <div style={{ display: 'grid', gap: 20 }}>
           {eventi.map(ev => (
             <div key={ev.id} onClick={() => setEventoScelto(ev)} style={styles.eventCard}>
-              {ev.image_url && <img src={ev.image_url} alt="" style={styles.eventImg} />}
+              {ev.image_url && <img src={ev.image_url} alt="" style={{ ...styles.eventImg, objectPosition: `center ${ev.image_position}%` }} />}
               <div style={styles.eventContent}>
                 <span style={styles.eventDate}>{new Date(ev.data).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</span>
                 <h3 style={styles.eventTitle}>{ev.titolo}</h3>
@@ -144,7 +144,17 @@ export default function Prenota() {
         <button onClick={() => setEventoScelto(null)} style={styles.backBtn}>← Cambia data</button>
         
         {eventoScelto.image_url && (
-            <img src={eventoScelto.image_url} alt="" style={{ width: 'calc(100% + 64px)', margin: '-32px -32px 24px', height: 200, objectFit: 'cover' }} />
+            <img 
+              src={eventoScelto.image_url} 
+              alt="" 
+              style={{ 
+                width: 'calc(100% + 64px)', 
+                margin: '-32px -32px 24px', 
+                height: 200, 
+                objectFit: 'cover',
+                objectPosition: `center ${eventoScelto.image_position}%`
+              }} 
+            />
         )}
         
         <p style={styles.subtitle}>{LIDO}</p>
