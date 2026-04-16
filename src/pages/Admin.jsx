@@ -270,7 +270,7 @@ export default function Admin() {
               <div style={inputGroup}>
                 <label style={labelStyle}>Posizione Inquadratura ({nuovoEvento.image_position}%)</label>
                 <input type="range" min="0" max="100" value={nuovoEvento.image_position} onChange={e => setNuovoEvento({...nuovoEvento, image_position: parseInt(e.target.value)})} style={{ width: '100%' }} />
-                <div style={{ marginTop: 8, height: 80, borderRadius: 8, overflow: 'hidden', background: '#f1f5f9', border: '1px solid #e2e8f0' }}>
+                <div style={{ marginTop: 8, aspectRatio: '1 / 1', borderRadius: 8, overflow: 'hidden', background: '#f1f5f9', border: '1px solid #e2e8f0' }}>
                    {(fileImmagine || (editingId && eventi.find(ev => ev.id === editingId)?.image_url)) && (
                      <img 
                       src={fileImmagine ? URL.createObjectURL(fileImmagine) : eventi.find(ev => ev.id === editingId)?.image_url} 

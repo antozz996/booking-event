@@ -150,7 +150,7 @@ export default function Prenota() {
               style={{ 
                 width: 'calc(100% + 64px)', 
                 margin: '-32px -32px 24px', 
-                height: 200, 
+                aspectRatio: '1 / 1', 
                 objectFit: 'cover',
                 objectPosition: `center ${eventoScelto.image_position}%`
               }} 
@@ -274,7 +274,7 @@ const styles = {
   button: { width: '100%', padding: '16px 20px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', marginTop: 8 },
   backBtn: { background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', padding: 0, marginBottom: 20 },
   eventCard: { background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', cursor: 'pointer', transition: 'transform 0.2s', border: '1px solid #f1f5f9' },
-  eventImg: { width: 140, height: '100%', minHeight: 140, objectFit: 'cover' },
+  eventImg: { width: 200, height: 200, objectFit: 'cover' },
   eventContent: { padding: 20, flex: 1 },
   eventDate: { fontSize: 12, fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' },
   eventTitle: { margin: '4px 0', fontSize: 18, color: '#0f172a' },
