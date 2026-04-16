@@ -31,8 +31,6 @@ export default function Prenota() {
       .then(({ data, error }) => {
         if (data && data.length > 0) {
           setEventi(data)
-          // Se c'è solo un evento, lo selezioniamo automaticamente
-          if (data.length === 1) setEventoScelto(data[0])
         }
         setFetchingEvents(false)
       })
