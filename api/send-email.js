@@ -81,7 +81,7 @@ export default async function handler(req, res) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      from: `${lidoNome} <onboarding@resend.dev>`,
+      from: `${lidoNome} <prenotazioni@send.keybeach.it>`,
       to: [email],
       subject: `Conferma — ${eventoTitolo} — ${lidoNome}`,
       html,
