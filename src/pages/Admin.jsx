@@ -92,15 +92,22 @@ export default function Admin() {
       }
     }
 
-    const payload = { ...nuovoEvento, image_url: urlImmagine }
+    const payload = { 
+      titolo: nuovoEvento.titolo,
+      data: nuovoEvento.data,
+      descrizione: nuovoEvento.descrizione,
+      image_url: urlImmagine 
+    }
     
-    const { error } = editingId 
-      ? await supabase.from('eventi').update(payload).eq('id', editingId)
-      : await supabase.from('eventi').insert([payload])
+    const { error, data } = editingId 
+      ? await supabase.from('eventi').update(payload).eq('id', editingId).select()
+      : await supabase.from('eventi').insert([payload]).select()
 
     if (error) {
-      alert('Errore salvataggio evento: ' + error.message)
+      console.error('Errore DB:', error)
+      alert('Errore salvataggio: ' + error.message)
     } else {
+      alert(editingId ? 'Evento aggiornato con successo!' : 'Evento creato con successo!')
       resetForm()
       setRefresh(r => r + 1)
     }
