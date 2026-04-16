@@ -32,9 +32,10 @@ export default function Admin() {
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
 
-  // Form Nuovo Evento
+  // Form Evento (Nuovo o Modifica)
   const [nuovoEvento, setNuovoEvento] = useState({ titolo: '', data: '', descrizione: '' })
   const [fileImmagine, setFileImmagine] = useState(null)
+  const [editingId, setEditingId] = useState(null)
   const [savingEvento, setSavingEvento] = useState(false)
 
   function login() {
@@ -59,12 +60,26 @@ export default function Admin() {
     })
   }, [autenticato, refresh])
 
-  async function creaEvento(e) {
+  function startEdit(ev) {
+    setEditingId(ev.id)
+    setNuovoEvento({ titolo: ev.titolo, data: ev.data, descrizione: ev.descrizione || '' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function resetForm() {
+    setEditingId(null)
+    setNuovoEvento({ titolo: '', data: '', descrizione: '' })
+    setFileImmagine(null)
+  }
+
+  async function salvaEvento(e) {
     e.preventDefault()
     if (!nuovoEvento.titolo || !nuovoEvento.data) return alert('Compila i campi obbligatori')
     setSavingEvento(true)
 
-    let urlImmagine = ''
+    let urlImmagine = editingId ? eventi.find(ev => ev.id === editingId)?.image_url : ''
+    
+    // Se c'è un nuovo file, caricalo
     if (fileImmagine) {
       const ext = fileImmagine.name.split('.').pop()
       const fileName = `${Math.random()}.${ext}`
@@ -77,15 +92,16 @@ export default function Admin() {
       }
     }
 
-    const { error } = await supabase.from('eventi').insert([
-      { ...nuovoEvento, image_url: urlImmagine }
-    ])
+    const payload = { ...nuovoEvento, image_url: urlImmagine }
+    
+    const { error } = editingId 
+      ? await supabase.from('eventi').update(payload).eq('id', editingId)
+      : await supabase.from('eventi').insert([payload])
 
     if (error) {
-      alert('Errore creazione evento: ' + error.message)
+      alert('Errore salvataggio evento: ' + error.message)
     } else {
-      setNuovoEvento({ titolo: '', data: '', descrizione: '' })
-      setFileImmagine(null)
+      resetForm()
       setRefresh(r => r + 1)
     }
     setSavingEvento(false)
@@ -216,10 +232,10 @@ export default function Admin() {
         </>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
-          {/* Form Nuovo Evento */}
+          {/* Form Evento */}
           <div style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.04)', height: 'fit-content' }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 18 }}>Aggiungi Evento</h3>
-            <form onSubmit={creaEvento}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 18, color: '#0f172a' }}>{editingId ? 'Modifica Evento' : 'Aggiungi Evento'}</h3>
+            <form onSubmit={salvaEvento}>
               <div style={inputGroup}>
                 <label style={labelStyle}>Titolo Evento *</label>
                 <input style={inputStyle} value={nuovoEvento.titolo} onChange={e => setNuovoEvento({...nuovoEvento, titolo: e.target.value})} placeholder="Es: Simba Party" />
@@ -229,36 +245,46 @@ export default function Admin() {
                 <input type="date" style={inputStyle} value={nuovoEvento.data} onChange={e => setNuovoEvento({...nuovoEvento, data: e.target.value})} />
               </div>
               <div style={inputGroup}>
-                <label style={labelStyle}>Immagine Copertina</label>
+                <label style={labelStyle}>Immagine Copertina {editingId && '(Opzionale)'}</label>
                 <input type="file" accept="image/*" onChange={e => setFileImmagine(e.target.files[0])} style={{ fontSize: 13 }} />
-                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>Salva nel bucket 'event-images'</p>
+                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>{editingId ? 'Lascia vuoto per mantenere l\'attuale' : 'Salva nel bucket "event-images"'}</p>
               </div>
               <div style={inputGroup}>
                 <label style={labelStyle}>Descrizione (opzionale)</label>
-                <textarea style={{...inputStyle, height: 60}} value={nuovoEvento.descrizione} onChange={e => setNuovoEvento({...nuovoEvento, descrizione: e.target.value})} />
+                <textarea style={{...inputStyle, height: 80, whiteSpace: 'pre-wrap'}} value={nuovoEvento.descrizione} onChange={e => setNuovoEvento({...nuovoEvento, descrizione: e.target.value})} />
               </div>
-              <button type="submit" disabled={savingEvento} style={{ width: '100%', padding: 12, background: '#0284c7', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
-                {savingEvento ? 'Salvataggio...' : 'Salva Evento'}
-              </button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button type="submit" disabled={savingEvento} style={{ flex: 1, padding: 12, background: '#0284c7', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+                  {savingEvento ? 'Salvataggio...' : editingId ? 'Aggiorna Evento' : 'Salva Evento'}
+                </button>
+                {editingId && (
+                  <button type="button" onClick={resetForm} style={{ padding: 12, background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+                    Annulla
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
           {/* Lista Eventi */}
           <div style={{ display: 'grid', gap: 16 }}>
             {eventi.length === 0 ? <p style={{ textAlign: 'center', color: '#6b7280', padding: 40 }}>Nessun evento in calendario</p> : eventi.map(ev => (
-              <div key={ev.id} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex' }}>
+              <div key={ev.id} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', border: editingId === ev.id ? '2px solid #0284c7' : 'none' }}>
                 {ev.image_url ? (
                   <img src={ev.image_url} alt="" style={{ width: 140, height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: 140, height: '100%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>No Image</div>
                 )}
                 <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: '#0284c7', textTransform: 'uppercase' }}>{new Date(ev.data).toLocaleDateString('it-IT')}</span>
-                    <button onClick={() => eliminaEvento(ev.id)} style={{ padding: '2px 8px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>Elimina</button>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button onClick={() => startEdit(ev)} style={{ padding: '2px 8px', color: '#0284c7', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Modifica</button>
+                      <button onClick={() => eliminaEvento(ev.id)} style={{ padding: '2px 8px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Elimina</button>
+                    </div>
                   </div>
-                  <h4 style={{ margin: '4px 0', fontSize: 16 }}>{ev.titolo}</h4>
-                  <p style={{ margin: 0, fontSize: 13, color: '#64748b', flex: 1 }}>{ev.descrizione}</p>
+                  <h4 style={{ margin: '4px 0', fontSize: 16, color: '#0f172a' }}>{ev.titolo}</h4>
+                  <p style={{ margin: 0, fontSize: 13, color: '#64748b', flex: 1, whiteSpace: 'pre-wrap' }}>{ev.descrizione}</p>
                 </div>
               </div>
             ))}
