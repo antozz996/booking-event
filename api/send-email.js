@@ -8,7 +8,8 @@ export default async function handler(req, res) {
     id, nome, cognome, email, telefono, 
     num_adulti, num_bambini, 
     pkg_10_adulti, pkg_10_bambini, pkg_20_adulti, 
-    num_lettini, prezzo_totale 
+    num_lettini, prezzo_totale,
+    evento // Nuovo oggetto dinamico
   } = req.body
 
   const appUrl  = process.env.VITE_APP_URL || process.env.APP_URL
@@ -21,8 +22,9 @@ export default async function handler(req, res) {
   })
   const qrData = qrBase64.replace(/^data:image\/png;base64,/, '')
 
-  const eventoNome = process.env.VITE_EVENTO_NOME || 'Evento'
   const lidoNome   = process.env.VITE_LIDO_NOME   || 'Key Beach'
+  const eventoTitolo = evento?.titolo || process.env.VITE_EVENTO_NOME || 'Evento'
+  const eventoDataFormatted = evento?.data ? new Date(evento.data).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
 
   // Costruisci riepilogo costi
   const riepilogoItems = []
@@ -37,7 +39,7 @@ export default async function handler(req, res) {
       <h1 style="font-size:22px;color:#0f172a;margin:0 0-16px">La tua prenotazione è confermata ✅</h1>
       <p style="color:#374151;font-size:15px;margin:0 0 8px">Ciao <strong>${nome} ${cognome}</strong>,</p>
       <p style="color:#374151;font-size:15px;margin:0 0 24px">
-        La tua prenotazione per <strong>${eventoNome}</strong> è stata registrata con successo.<br>
+        La tua prenotazione per <strong>${eventoTitolo}</strong> ${eventoDataFormatted ? `del <strong>${eventoDataFormatted}</strong>` : ''} è stata registrata con successo.<br>
         Persone: <strong>${num_adulti} adult${num_adulti === 1 ? 'o' : 'i'}${num_bambini > 0 ? `, ${num_bambini} bambin${num_bambini === 1 ? 'o' : 'i'}` : ''}</strong>
       </p>
 
@@ -81,7 +83,7 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       from: `${lidoNome} <onboarding@resend.dev>`,
       to: [email],
-      subject: `Conferma prenotazione — ${eventoNome}`,
+      subject: `Conferma — ${eventoTitolo} — ${lidoNome}`,
       html,
       attachments: [{
         filename: 'qrcode.png',

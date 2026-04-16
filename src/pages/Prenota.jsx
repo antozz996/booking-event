@@ -2,13 +2,17 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-const EVENTO = import.meta.env.VITE_EVENTO_NOME
-const LIDO   = import.meta.env.VITE_LIDO_NOME
+const LIDO = import.meta.env.VITE_LIDO_NOME
 
 export default function Prenota() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [fetchingEvents, setFetchingEvents] = useState(true)
   const [errore, setErrore] = useState(null)
+  
+  const [eventi, setEventi] = useState([])
+  const [eventoScelto, setEventoScelto] = useState(null)
+  
   const [confermato, setConfermato] = useState(false)
   const [form, setForm] = useState({
     nome: '', cognome: '', email: '', telefono: '',
@@ -16,6 +20,23 @@ export default function Prenota() {
     pkg_10_adulti: 0, pkg_10_bambini: 0, pkg_20_adulti: 0,
     num_lettini: 0, note: '', prezzo_totale: 0
   })
+
+  // Caricamento eventi disponibili
+  useEffect(() => {
+    supabase.from('eventi')
+      .select('*')
+      .eq('is_active', true)
+      .gte('data', new Date().toISOString().split('T')[0])
+      .order('data', { ascending: true })
+      .then(({ data, error }) => {
+        if (data && data.length > 0) {
+          setEventi(data)
+          // Se c'è solo un evento, lo selezioniamo automaticamente
+          if (data.length === 1) setEventoScelto(data[0])
+        }
+        setFetchingEvents(false)
+      })
+  }, [])
 
   // Calcolo totale dinamico
   useEffect(() => {
@@ -42,9 +63,15 @@ export default function Prenota() {
     setLoading(true)
     setErrore(null)
 
+    const payload = {
+      ...form,
+      id_evento: eventoScelto.id,
+      status: 'confermata'
+    }
+
     const { data, error } = await supabase
       .from('prenotazioni')
-      .insert([{ ...form, status: 'confermata' }])
+      .insert([payload])
       .select()
       .single()
 
@@ -55,28 +82,75 @@ export default function Prenota() {
       return
     }
 
-    await sendEmail(data)
+    // Invia email includendo i dati dell'evento
+    await sendEmail({ ...data, evento: eventoScelto })
     navigate('/conferma', { state: { prenotazione: data } })
   }
 
-  async function sendEmail(prenotazione) {
+  async function sendEmail(payload) {
     try {
       await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(prenotazione)
+        body: JSON.stringify(payload)
       })
     } catch (err) {
       console.error('Errore invio email:', err)
     }
   }
 
+  if (fetchingEvents) return (
+    <div style={styles.container}>
+      <p style={{ color: '#64748b' }}>Caricamento calendario...</p>
+    </div>
+  )
+
+  if (eventi.length === 0) return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>Al momento non ci sono eventi prenotabili</h1>
+        <p style={styles.desc}>Torna a trovarci presto!</p>
+      </div>
+    </div>
+  )
+
+  // Schermo Selezione Data
+  if (!eventoScelto) return (
+    <div style={styles.container}>
+      <div style={{ maxWidth: 600, width: '100%' }}>
+        <p style={styles.subtitle}>{LIDO}</p>
+        <h1 style={{ ...styles.title, fontSize: 28, marginBottom: 24 }}>Scegli una data</h1>
+        <div style={{ display: 'grid', gap: 20 }}>
+          {eventi.map(ev => (
+            <div key={ev.id} onClick={() => setEventoScelto(ev)} style={styles.eventCard}>
+              {ev.image_url && <img src={ev.image_url} alt="" style={styles.eventImg} />}
+              <div style={styles.eventContent}>
+                <span style={styles.eventDate}>{new Date(ev.data).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</span>
+                <h3 style={styles.eventTitle}>{ev.titolo}</h3>
+                <p style={styles.eventDesc}>{ev.descrizione}</p>
+                <div style={styles.eventBtn}>Prenota per questa data →</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
+  // Schermo Form Prenotazione
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        <button onClick={() => setEventoScelto(null)} style={styles.backBtn}>← Cambia data</button>
+        
+        {eventoScelto.image_url && (
+            <img src={eventoScelto.image_url} alt="" style={{ width: 'calc(100% + 64px)', margin: '-32px -32px 24px', height: 200, objectFit: 'cover' }} />
+        )}
+        
         <p style={styles.subtitle}>{LIDO}</p>
-        <h1 style={styles.title}>{EVENTO}</h1>
-        <p style={styles.desc}>Riserva il tuo posto e scegli i pacchetti food & drink. Riceverai il QR code via email.</p>
+        <h1 style={styles.title}>{eventoScelto.titolo}</h1>
+        <p style={styles.desc}>{eventoScelto.descrizione || 'Riserva il tuo posto e scegli i pacchetti food & drink.'}</p>
+        <p style={{ ...styles.subtitle, color: '#0f172a', marginBottom: 24 }}>📅 {new Date(eventoScelto.data).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
 
         <form onSubmit={submit}>
           <h3 style={styles.sectionTitle}>Dati Personali</h3>
@@ -121,7 +195,7 @@ export default function Prenota() {
             </div>
           </div>
 
-          <h3 style={styles.sectionTitle}>Food & Drink (opzionali)</h3>
+          <h3 style={styles.sectionTitle}>Food & Drink</h3>
           <div style={styles.field}>
             <label style={styles.label}>Pacchetto 10€ ADULTI (Spritz incluso)</label>
             <select style={styles.input} name="pkg_10_adulti" value={form.pkg_10_adulti} onChange={handle}>
@@ -149,13 +223,6 @@ export default function Prenota() {
             </select>
           </div>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Note (opzionale)</label>
-            <textarea style={{...styles.input, height: 60, resize: 'vertical'}}
-              name="note" value={form.note} onChange={handle}
-              placeholder="Allergie o esigenze particolari..." />
-          </div>
-
           <div style={styles.totalBox}>
             <p style={{ margin: 0, fontSize: 14 }}>Totale da pagare all'arrivo:</p>
             <p style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#0369a1' }}>{form.prezzo_totale}€</p>
@@ -173,7 +240,7 @@ export default function Prenota() {
           {errore && <p style={styles.error}>{errore}</p>}
 
           <button type="submit" disabled={loading} style={{...styles.button, opacity: loading ? 0.7 : 1}}>
-            {loading ? 'Invio in corso...' : `Prenota ed effettua check-in all'arrivo →`}
+            {loading ? 'Invio in corso...' : `Conferma Prenotazione →`}
           </button>
         </form>
       </div>
@@ -182,17 +249,25 @@ export default function Prenota() {
 }
 
 const styles = {
-  container: { minHeight: '100vh', background: '#f0f9ff', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px' },
-  card: { background: '#fff', borderRadius: 16, padding: 32, maxWidth: 520, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' },
+  container: { minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px' },
+  card: { background: '#fff', borderRadius: 24, padding: 32, maxWidth: 520, width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' },
   subtitle: { color: '#0284c7', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 4px' },
-  title: { fontSize: 22, fontWeight: 700, margin: '0 0 8px', color: '#0f172a' },
-  desc: { color: '#64748b', fontSize: 14, margin: '0 0 24px', lineHeight: 1.6 },
+  title: { fontSize: 24, fontWeight: 800, margin: '0 0 8px', color: '#0f172a' },
+  desc: { color: '#64748b', fontSize: 15, margin: '0 0 24px', lineHeight: 1.6 },
   sectionTitle: { fontSize: 16, fontWeight: 700, color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: 8, marginTop: 24, marginBottom: 16 },
   row: { display: 'flex', gap: 12 },
   field: { display: 'flex', flexDirection: 'column', marginBottom: 16, flex: 1 },
   label: { fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 4 },
-  input: { padding: '10px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 15, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' },
-  totalBox: { background: '#f0f9ff', borderRadius: 12, padding: 16, textAlign: 'center', marginTop: 10, border: '1px dashed #0284c7' },
+  input: { padding: '12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 15, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' },
+  totalBox: { background: '#f0f9ff', borderRadius: 16, padding: 20, textAlign: 'center', marginTop: 10, border: '1px solid #bae6fd' },
   error: { color: '#dc2626', fontSize: 14, marginBottom: 12, fontWeight: 500 },
-  button: { width: '100%', padding: '14px 20px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 600, cursor: 'pointer', marginTop: 4 }
+  button: { width: '100%', padding: '16px 20px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', marginTop: 8 },
+  backBtn: { background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', padding: 0, marginBottom: 20 },
+  eventCard: { background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', cursor: 'pointer', transition: 'transform 0.2s', border: '1px solid #f1f5f9' },
+  eventImg: { width: 140, height: '100%', minHeight: 140, objectFit: 'cover' },
+  eventContent: { padding: 20, flex: 1 },
+  eventDate: { fontSize: 12, fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' },
+  eventTitle: { margin: '4px 0', fontSize: 18, color: '#0f172a' },
+  eventDesc: { margin: 0, fontSize: 14, color: '#6b7280', lineHeight: 1.4 },
+  eventBtn: { marginTop: 12, fontSize: 13, fontWeight: 600, color: '#0284c7' }
 }
