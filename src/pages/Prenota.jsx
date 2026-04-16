@@ -253,7 +253,7 @@ const styles = {
   card: { background: '#fff', borderRadius: 24, padding: 32, maxWidth: 520, width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' },
   subtitle: { color: '#0284c7', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 4px' },
   title: { fontSize: 24, fontWeight: 800, margin: '0 0 8px', color: '#0f172a' },
-  desc: { color: '#64748b', fontSize: 15, margin: '0 0 24px', lineHeight: 1.6 },
+  desc: { color: '#64748b', fontSize: 15, margin: '0 0 24px', lineHeight: 1.6, whiteSpace: 'pre-wrap' },
   sectionTitle: { fontSize: 16, fontWeight: 700, color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: 8, marginTop: 24, marginBottom: 16 },
   row: { display: 'flex', gap: 12 },
   field: { display: 'flex', flexDirection: 'column', marginBottom: 16, flex: 1 },
@@ -268,6 +268,6 @@ const styles = {
   eventContent: { padding: 20, flex: 1 },
   eventDate: { fontSize: 12, fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' },
   eventTitle: { margin: '4px 0', fontSize: 18, color: '#0f172a' },
-  eventDesc: { margin: 0, fontSize: 14, color: '#6b7280', lineHeight: 1.4 },
+  eventDesc: { margin: 0, fontSize: 14, color: '#6b7280', lineHeight: 1.4, whiteSpace: 'pre-wrap' },
   eventBtn: { marginTop: 12, fontSize: 13, fontWeight: 600, color: '#0284c7' }
 }
